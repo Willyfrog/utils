@@ -7,7 +7,7 @@ requirements:
 - python 2.7
 - requests
 
-Just change the config changing the urls you want to monitor and 
+Just change in the config the urls you want to monitor and 
 the email config to use for alerts
 
 Two conditions will trigger email alerts:
