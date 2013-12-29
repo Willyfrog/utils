@@ -77,7 +77,6 @@ def main():
     for url, search_for in sites.iteritems():
         try:
             url_ok(url,search_for)
-           
         except ServerError as error:
             subject = u'error {url} {time}'.format(url=unicode(url),
                                                   time=unicode(datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")))
