@@ -27,8 +27,7 @@ mail_config = {
 ### END OF CONFIG. 
     
 class ServerError(Exception):
-    def __init__(self, message):
-        Exception.__init__(self, message)
+    pass
 
 def send_email(sender, recipient, subject, body, host='localhost', port='25', username=None, password=None, header_charset='UTF-8'):
  
@@ -81,7 +80,6 @@ def main():
             subject = u'error {url} {time}'.format(url=unicode(url),
                                                   time=unicode(datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")))
             print "error mail sent"
-            
             send_email(mail_config['mail_from'],
                       mail_config['to'] ,
                       subject,
