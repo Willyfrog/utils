@@ -2,21 +2,16 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import sys
 from requests import get
 from smtplib import SMTP
 from email.mime.text import MIMEText
 from email.header import Header
 from email.Utils import parseaddr, formataddr
+from ConfigParser import SafeConfigParser, NoSectionError
 
-### CONFIG
-# list of urls that will be checkek for 200 status and text
-sites = {
-    'http://en.wikipedia.org/wiki/Hacker_News' : u'Initially it was called Startup News or occasionally News.YC',
-    'http://www.washingtonpost.com/' : u'Politics',
-    'http://www.rackspace.com/' : u'Managed Hosting',
-}
-
-mail_config = {
+### default values for mail config
+default_mail_config = {
     'host' : 'smtp.gmail.com',
     'port' : 587,
     'username' : 'youremail@gmail.com',
@@ -24,9 +19,12 @@ mail_config = {
     'to' : 'youremail@gmail.com',
     'mail_from' : 'youremail@gmail.com',
 }
-### END OF CONFIG. 
+### END OF DEFAULT CONFIG
     
 class ServerError(Exception):
+    pass
+
+class ConfigException(Exception):
     pass
 
 def send_email(sender, recipient, subject, body, host='localhost', port='25', username=None, password=None, header_charset='UTF-8'):
@@ -70,12 +68,10 @@ def url_ok(url, search_for):
         raise ServerError(error)
     return True
     
-def main():
-    global sites
-    global mail_config
+def main(sites, mail_config):
     for url, search_for in sites.iteritems():
         try:
-            url_ok(url,search_for)
+            url_ok(url, search_for)
         except ServerError as error:
             subject = u'error {url} {time}'.format(url=unicode(url),
                                                   time=unicode(datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")))
@@ -89,5 +85,48 @@ def main():
                       mail_config['username'],
                       mail_config['password'])
 
+
+def get_config(filename):
+    """
+    Given a file, retrieve the mail and sites configuration for the script
+    Arguments:
+    - `filename`:
+
+    Config file is expected to have a Sites section and a Mail section
+    An additional SitesSSL can be added for checking SSL sites
+    
+    """
+    config = SafeConfigParser()
+    found = config.read(filename)
+    if not found:
+        raise ConfigException("File not found")
+
+    try:
+        sites = {"http://%s" % site: text for site, text in config.items("Sites")}
+        mail_config = dict(config.items("Mail"))
+    except NoSectionError as e:
+        #no section: no cookie!
+        raise ConfigException(e.message)
+
+    # read ssl sites and prepend https
+    try:
+        sites_ssl = {"https://%s" % site: text for site, text in config.items("SitesSSL")}
+    except NoSectionError as e:
+        pass
+    else:
+        sites.update(sites_ssl)
+
+    for field in default_mail_config:
+        # fill in defaults for any non present field
+        mail_config[field] = mail_config.get(field, default_mail_config[field])
+
+    return (sites, mail_config)
+            
 if __name__ == "__main__":
-    main()
+    try:
+        sites, mail_config = get_config("check.cfg")  # FIXME: add a default or a flag to change
+    except ConfigException as e:
+        print e
+        sys.exit()
+
+    main(sites, mail_config)
